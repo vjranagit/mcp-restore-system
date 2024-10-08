@@ -146,3 +146,278 @@ GITHUB_TOKEN="REDACTED_GITHUB_TOKEN"
 # Python MCP servers to install
 declare -A PYTHON_SERVERS=(
     ["gmail"]="/home/vjrana/custom-gmail-mcp"
+    ["zabbix"]="/home/vjrana/work/mcp-servers/servers/zabbix"
+    ["elk"]="/home/vjrana/mcp-servers/elk"
+)
+
+# NPM MCP packages
+declare -a NPM_PACKAGES=(
+    "@modelcontextprotocol/server-filesystem"
+    "@modelcontextprotocol/server-github"
+    "@playwright/mcp@latest"
+    "@upstash/context7-mcp"
+    "@agent-infra/mcp-server-browser"
+    "mcp-n8n-builder"
+    "n8n-mcp"
+)
+
+# Create backup
+create_backup() {
+    log "Creating backup of current configuration..."
+
+    mkdir -p "$BACKUP_DIR"
+    local backup_file="${BACKUP_DIR}/claude_backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+
+    # Backup .claude.json if exists
+    if [ -f ~/.claude.json ]; then
+        cp ~/.claude.json "${BACKUP_DIR}/claude.json.backup"
+    fi
+
+    # Backup MCP server directories
+    for server in "${!PYTHON_SERVERS[@]}"; do
+        server_dir="${PYTHON_SERVERS[$server]}"
+        if [ -d "$server_dir" ]; then
+            tar czf "${BACKUP_DIR}/${server}_backup.tar.gz" -C "$(dirname "$server_dir")" "$(basename "$server_dir")" 2>/dev/null || true
+        fi
+    done
+
+    # Create compressed backup
+    tar czf "$backup_file" -C "$BACKUP_DIR" . 2>/dev/null || true
+
+    log "Backup created: $backup_file"
+
+    if [ "$BACKUP_ONLY" = true ]; then
+        log "Backup completed. Exiting."
+        exit 0
+    fi
+}
+
+# Setup Python MCP servers
+setup_python_servers() {
+    log "Setting up Python MCP servers..."
+
+    for server in "${!PYTHON_SERVERS[@]}"; do
+        server_dir="${PYTHON_SERVERS[$server]}"
+        log_info "Setting up $server in $server_dir"
+
+        # Create directory
+        mkdir -p "$server_dir" || { log_error "Failed to create directory $server_dir"; continue; }
+
+        # Create virtual environment
+        if [ ! -d "${server_dir}/venv" ]; then
+            if ! python3 -m venv "${server_dir}/venv"; then
+                log_error "Failed to create virtual environment for $server"
+                continue
+            fi
+            log_info "Created virtual environment for $server"
+        else
+            log_info "Virtual environment already exists for $server"
+        fi
+
+        # Activate and install dependencies
+        if ! source "${server_dir}/venv/bin/activate"; then
+            log_error "Failed to activate virtual environment for $server"
+            continue
+        fi
+
+        # Install common MCP dependencies with error handling
+        log_info "Installing dependencies for $server..."
+        if ! pip install --upgrade pip -q; then
+            log_warning "Failed to upgrade pip for $server"
+        fi
+
+        if ! pip install mcp pydantic -q 2>/dev/null; then
+            log_warning "Failed to install MCP packages for $server (may already be installed)"
+        fi
+
+        # Server-specific installations
+        case $server in
+            gmail)
+                pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client -q || log_warning "Failed to install Gmail dependencies"
+                ;;
+            zabbix)
+                pip install pyzabbix requests -q || log_warning "Failed to install Zabbix dependencies"
+                ;;
+            elk)
+                pip install elasticsearch -q || log_warning "Failed to install Elasticsearch dependencies"
+                ;;
+        esac
+
+        deactivate
+        log "✓ $server setup complete"
+    done
+}
+
+# Install NPM packages globally
+install_npm_packages() {
+    log "Installing NPM MCP packages..."
+
+    # Check if npm is available
+    if ! command_exists npm; then
+        log_error "NPM not found. Cannot install packages."
+        return 1
+    fi
+
+    for package in "${NPM_PACKAGES[@]}"; do
+        log_info "Checking $package"
+        # Don't need to install globally since we use npx
+        log_info "✓ $package will be used via npx"
+    done
+
+    log "NPM package configuration complete (using npx on-demand)"
+}
+
+# Restore Claude configuration
+restore_claude_config() {
+    log "Restoring Claude configuration..."
+
+    # Decode and write .claude.json
+    local claude_config=$(echo "$CLAUDE_CONFIG_B64" | base64 -d)
+
+    # Update paths to current user's home directory
+    local current_user=$(whoami)
+    local current_home=$(eval echo ~$current_user)
+
+    # Replace hardcoded paths with current user's paths
+    claude_config=$(echo "$claude_config" | sed "s|/home/vjrana|$current_home|g")
+
+    # Backup existing config
+    if [ -f ~/.claude.json ]; then
+        cp ~/.claude.json ~/.claude.json.backup.$(date +%Y%m%d_%H%M%S)
+        log_info "Backed up existing .claude.json"
+    fi
+
+    # Write new config
+    echo "$claude_config" > ~/.claude.json
+    log "✓ Claude configuration restored to ~/.claude.json"
+}
+
+# Set environment variables
+setup_environment() {
+    log "Setting up environment variables..."
+
+    # Add to .bashrc if not already present
+    for var in "${!ENV_VARS[@]}"; do
+        if ! grep -q "export $var=" ~/.bashrc; then
+            echo "export $var=\"${ENV_VARS[$var]}\"" >> ~/.bashrc
+            log_info "Added $var to .bashrc"
+        fi
+    done
+
+    log "Environment variables configured. Run 'source ~/.bashrc' to apply."
+}
+
+# Clone MCP server repositories (if needed)
+clone_mcp_repos() {
+    log "Checking MCP server repositories..."
+
+    # Gmail MCP (if you have a repo for it)
+    if [ ! -d "/home/$(whoami)/custom-gmail-mcp/.git" ]; then
+        log_info "Gmail MCP needs to be cloned or created"
+        # Add your repo URL here if available
+        # git clone <your-repo-url> /home/$(whoami)/custom-gmail-mcp
+    fi
+
+    # Zabbix MCP
+    if [ ! -d "/home/$(whoami)/work/mcp-servers/servers/zabbix/.git" ]; then
+        log_info "Zabbix MCP needs to be cloned or created"
+        mkdir -p "/home/$(whoami)/work/mcp-servers/servers/zabbix"
+        # Add setup logic here
+    fi
+
+    # ELK MCP
+    if [ ! -d "/home/$(whoami)/mcp-servers/elk/.git" ]; then
+        log_info "ELK MCP needs to be cloned or created"
+        mkdir -p "/home/$(whoami)/mcp-servers/elk"
+        # Add setup logic here
+    fi
+}
+
+# Verify installation
+verify_installation() {
+    log "Verifying installation..."
+
+    local errors=0
+
+    # Check .claude.json
+    if [ -f ~/.claude.json ]; then
+        log "✓ .claude.json exists"
+        if jq empty ~/.claude.json 2>/dev/null; then
+            log "✓ .claude.json is valid JSON"
+        else
+            log_error ".claude.json is not valid JSON"
+            ((errors++))
+        fi
+    else
+        log_error ".claude.json not found"
+        ((errors++))
+    fi
+
+    # Check Python servers
+    for server in "${!PYTHON_SERVERS[@]}"; do
+        server_dir="${PYTHON_SERVERS[$server]}"
+        if [ -d "${server_dir}/venv" ]; then
+            log "✓ $server virtual environment exists"
+        else
+            log_error "$server virtual environment missing"
+            ((errors++))
+        fi
+    done
+
+    # Check node/npm
+    if command -v node &> /dev/null; then
+        log "✓ Node.js installed: $(node --version)"
+    else
+        log_error "Node.js not found"
+        ((errors++))
+    fi
+
+    if command -v npm &> /dev/null; then
+        log "✓ NPM installed: $(npm --version)"
+    else
+        log_error "NPM not found"
+        ((errors++))
+    fi
+
+    if [ $errors -eq 0 ]; then
+        log "${GREEN}✓ All verifications passed!${NC}"
+        return 0
+    else
+        log_error "$errors error(s) found during verification"
+        return 1
+    fi
+}
+
+# Main execution
+main() {
+    clear
+    echo "=================================="
+    echo "   Claude MCP Restore System"
+    echo "=================================="
+    echo ""
+
+    log "Starting restoration process..."
+    log "Log file: $LOG_FILE"
+
+    check_not_root
+    detect_os
+
+    if [ "$AUTO_MODE" = false ] && [ "$BACKUP_ONLY" = false ]; then
+        read -p "This will restore all MCP servers. Continue? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log "Restoration cancelled by user"
+            exit 0
+        fi
+    fi
+
+    create_backup
+
+    if ! install_dependencies; then
+        log_error "Dependency installation had errors. Continuing anyway..."
+    fi
+
+    clone_mcp_repos
+    setup_python_servers
+
+    if ! install_npm_packages; then
