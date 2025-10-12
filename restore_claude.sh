@@ -118,6 +118,7 @@ declare -A ENV_VARS=(
     ["ZABBIX_READ_ONLY"]="true"
     ["N8N_HOST"]="https://n8n.kryptoservs.com/n8n"
     ["N8N_API_KEY"]="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTAwNjM5fQ.St3-q-iW37vTt-4x3C7VqkZDkbxVmDMMWC2oj_bcfYk"
+    ["GITHUB_PERSONAL_ACCESS_TOKEN"]="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"
     # Add more environment variables as needed
 )
 
