@@ -77,7 +77,7 @@
       ],
       "env": {
         "N8N_HOST": "https://n8n.kryptoservs.com/n8n",
-        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTAwNjM5fQ.St3-q-iW37vtT-4x3C7VqkZDkbxVmDMMWc2oj_bcfYk",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYwMjQ4NjY5fQ.G0LZwL2BAv1TjYxrFj3lMv6FsDRV0jzLWeOQC8X9Gxo",
         "OUTPUT_VERBOSITY": "concise"
       }
     },
@@ -93,7 +93,7 @@
         "DISABLE_CONSOLE_OUTPUT": "true",
         "N8N_MCP_TELEMETRY_DISABLED": "true",
         "N8N_API_URL": "https://n8n.kryptoservs.com/n8n",
-        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTAwNjM5fQ.St3-q-iW37vtT-4x3C7VqkZDkbxVmDMMWc2oj_bcfYk"
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYwMjQ4NjY5fQ.G0LZwL2BAv1TjYxrFj3lMv6FsDRV0jzLWeOQC8X9Gxo"
       }
     },
     "firefly-iii": {
