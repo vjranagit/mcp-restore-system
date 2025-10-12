@@ -1,6 +1,15 @@
-# Claude MCP Restore System
+# Claude MCP Restore System v2.0.0
 
-A complete restoration and deployment system for Claude MCP servers. This toolkit allows you to backup, restore, and deploy all MCP configurations and servers across multiple machines with a single command.
+**Never struggle with MCP configuration again.** A complete restoration, validation, and backup system for all 11 Claude MCP servers. One command restores everything in under 2 minutes.
+
+## ⚡ The Golden Rule
+
+If something breaks, run ONE command:
+```bash
+cd ~/work/projects/mcp-restore-system && ./restore_claude.sh --auto
+```
+
+That's it. Everything restored in under 2 minutes.
 
 ## 🚀 Quick Start
 
@@ -20,23 +29,25 @@ cd mcp-restore-system
 
 ## 📦 What's Included
 
-### MCP Servers Configured
-- **Gmail MCP** - Email management and search
-- **Zabbix MCP** - Infrastructure monitoring
-- **ELK MCP** - Elasticsearch/Kibana integration
-- **Filesystem MCP** - Local file operations
-- **GitHub MCP** - Repository management
-- **Playwright MCP** - Browser automation
-- **Context7 MCP** - Documentation lookup
-- **Agent Browser MCP** - Web browsing agent
-- **n8n Workflows MCP** - Workflow automation
-- **n8n Docs MCP** - n8n documentation
+### All 11 MCP Servers
+1. **gmail** (Python) - Email management and search
+2. **zabbix** (Python) - Infrastructure monitoring
+3. **elk** (Python) - Elasticsearch/Kibana integration
+4. **filesystem** (NPX) - Local file operations
+5. **github** (NPX) - Repository management
+6. **playwright** (NPX) - Browser automation
+7. **context7** (NPX) - Documentation lookup
+8. **agent-browser** (NPX) - Web browsing agent
+9. **n8n-workflows** (NPX) - Workflow automation builder
+10. **n8n-docs** (NPX) - n8n documentation
+11. **firefly-iii** (Bash) - Personal finance manager
 
-### Scripts
+### Core Scripts
 - `restore_claude.sh` - Main restoration script
-- `quick_install.sh` - Simplified installation wrapper
-- `deploy_mcp_ansible.yml` - Ansible playbook for multi-host deployment
-- `inventory.example` - Ansible inventory template
+- `validate_mcp.sh` - Configuration validation (checks all 11 servers)
+- `setup_daily_backup.sh` - Daily backup automation
+- `MCP_RULEBOOK.md` - Comprehensive troubleshooting guide
+- `TESTING_PROTOCOL.md` - Testing procedures for all 11 servers
 
 ## 🛠️ Installation Methods
 
@@ -55,11 +66,26 @@ cd mcp-restore-system
 
 **What it does:**
 - Installs all system dependencies (Python, Node.js, npm, git)
-- Creates Python virtual environments for custom MCP servers
-- Installs NPM packages for MCP servers
-- Restores `.claude.json` configuration
+- Creates Python virtual environments for custom MCP servers (gmail, zabbix, elk)
+- Installs NPM packages for MCP servers (filesystem, github, playwright, context7, agent-browser, n8n)
+- Sets up Firefly III wrapper script and credentials
+- Restores `.claude.json` configuration with ALL 11 servers
+- Fixes JWT token typos automatically
 - Sets up environment variables
-- Verifies installation
+- Verifies all 11 servers are configured
+
+### Validate Configuration
+
+After running restore, verify everything is working:
+
+```bash
+# Validate all 11 servers
+./validate_mcp.sh
+
+# Expected output:
+# ✓ Validation PASSED
+# All 11 MCP servers are configured
+```
 
 ### Method 2: Remote Deployment (Ansible)
 
@@ -365,5 +391,45 @@ For issues:
 
 ---
 
-**Last Updated**: $(date +%Y-%m-%d)
-**Version**: 1.0.0
+## 🎉 Version 2.0.0 Release
+
+### What's New in v2.0.0
+
+**Major Features:**
+- ✅ Fixed critical JWT token typo bug that prevented n8n authentication
+- ✅ Added Firefly III support (11th MCP server)
+- ✅ Complete validation system (`validate_mcp.sh`)
+- ✅ Daily backup automation (`setup_daily_backup.sh`)
+- ✅ Comprehensive troubleshooting rulebook (`MCP_RULEBOOK.md`)
+- ✅ Detailed testing protocol (`TESTING_PROTOCOL.md`)
+- ✅ All 11 servers restore correctly in under 2 minutes
+
+**Critical Fixes:**
+- JWT token typo: "pqblic-api" → "public-api" (was breaking n8n servers)
+- Missing Firefly III configuration
+- Outdated base64 configuration in restore script
+- No validation or testing system
+
+### Quick Commands
+
+```bash
+# Restore everything
+./restore_claude.sh --auto
+
+# Validate configuration
+./validate_mcp.sh
+
+# Setup daily backups
+./setup_daily_backup.sh
+
+# See troubleshooting guide
+cat MCP_RULEBOOK.md
+
+# See testing protocol
+cat TESTING_PROTOCOL.md
+```
+
+---
+
+**Last Updated**: 2025-10-12
+**Version**: 2.0.0
