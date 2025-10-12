@@ -17,7 +17,7 @@
 #   ./restore_claude.sh --backup     # Create backup only
 ################################################################################
 
-set -e  # Exit on error
+# Note: Not using set -e to handle errors gracefully and continue with partial installs
 
 # Colors for output
 RED='\033[0;31m'
@@ -90,19 +90,40 @@ detect_os() {
     log_info "Detected OS: $OS $OS_VERSION"
 }
 
+# Check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
 # Install system dependencies
 install_dependencies() {
     log "Installing system dependencies..."
 
+    # Check if dependencies already exist
+    local missing_deps=()
+    for cmd in python3 node npm git curl wget jq; do
+        if ! command_exists "$cmd"; then
+            missing_deps+=("$cmd")
+        fi
+    done
+
+    if [ ${#missing_deps[@]} -eq 0 ]; then
+        log "All dependencies already installed"
+        return 0
+    fi
+
+    log_info "Missing dependencies: ${missing_deps[*]}"
+
     if [ "$OS" = "ubuntu" ] || [ "$OS" = "debian" ]; then
-        sudo apt-get update
-        sudo apt-get install -y python3 python3-pip python3-venv nodejs npm git curl wget jq
+        sudo apt-get update || { log_error "Failed to update apt"; return 1; }
+        sudo apt-get install -y python3 python3-pip python3-venv nodejs npm git curl wget jq || { log_error "Failed to install dependencies"; return 1; }
     elif [ "$OS" = "fedora" ] || [ "$OS" = "rhel" ] || [ "$OS" = "centos" ]; then
-        sudo dnf install -y python3 python3-pip nodejs npm git curl wget jq
+        sudo dnf install -y python3 python3-pip nodejs npm git curl wget jq || { log_error "Failed to install dependencies"; return 1; }
     elif [ "$OS" = "arch" ]; then
-        sudo pacman -S --noconfirm python python-pip nodejs npm git curl wget jq
+        sudo pacman -S --noconfirm python python-pip nodejs npm git curl wget jq || { log_error "Failed to install dependencies"; return 1; }
     else
         log_warning "Unknown OS. Please install dependencies manually: python3, nodejs, npm, git, curl, wget, jq"
+        return 1
     fi
 
     log "Dependencies installed successfully"
@@ -110,14 +131,14 @@ install_dependencies() {
 
 # Base64 encoded Claude configuration
 # This is the snapshot of your current .claude.json with all MCP servers configured
-CLAUDE_CONFIG_B64="ewogICJtY3BTZXJ2ZXJzIjogewogICAgImdtYWlsIjogewogICAgICAiY29tbWFuZCI6ICIvaG9tZS92anJhbmEvY3VzdG9tLWdtYWlsLW1jcC92ZW52L2Jpbi9weXRob24iLAogICAgICAiYXJncyI6IFsKICAgICAgICAiL2hvbWUvdmpyYW5hL2N1c3RvbS1nbWFpbC1tY3AvZW5oYW5jZWRfc2VydmVyLnB5IgogICAgICBdCiAgICB9LAogICAgInphYmJpeCI6IHsKICAgICAgImNvbW1hbmQiOiAiL2hvbWUvdmpyYW5hL3dvcmsvbWNwLXNlcnZlcnMvc2VydmVycy96YWJiaXgvdmVudi9iaW4vcHl0aG9uIiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi9ob21lL3ZqcmFuYS93b3JrL21jcC1zZXJ2ZXJzL3NlcnZlcnMvemFiYml4L3NjcmlwdHMvc3RhcnRfc2VydmVyLnB5IgogICAgICBdLAogICAgICAiZW52IjogewogICAgICAgICJaQUJCSVhfVVJMIjogImh0dHA6Ly9sb2NhbGhvc3Q6MTgwODIiLAogICAgICAgICJSRUFEX09OTFkiOiAidHJ1ZSIKICAgICAgfQogICAgfSwKICAgICJlbGsiOiB7CiAgICAgICJjb21tYW5kIjogIi9ob21lL3ZqcmFuYS9tY3Atc2VydmVycy9lbGsvdmVudi9iaW4vcHl0aG9uIiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi9ob21lL3ZqcmFuYS9tY3Atc2VydmVycy9lbGsvc2VydmVyLnB5IgogICAgICBdLAogICAgICAiZW52Ijoge30KICAgIH0sCiAgICAiZmlsZXN5c3RlbSI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAiQG1vZGVsY29udGV4dHByb3RvY29sL3NlcnZlci1maWxlc3lzdGVtIiwKICAgICAgICAiL2hvbWUvdmpyYW5hIgogICAgICBdCiAgICB9LAogICAgImdpdGh1YiI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAiQG1vZGVsY29udGV4dHByb3RvY29sL3NlcnZlci1naXRodWIiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7CiAgICAgICAgIkdJVEhVQl9QRVJTT05BTF9BQ0NFU1NfVE9LRU4iOiAiIgogICAgICB9CiAgICB9LAogICAgInBsYXl3cmlnaHQiOiB7CiAgICAgICJjb21tYW5kIjogIm5weCIsCiAgICAgICJhcmdzIjogWwogICAgICAgICIteSIsCiAgICAgICAgIkBwbGF5d3JpZ2h0L21jcEBsYXRlc3QiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7fQogICAgfSwKICAgICJjb250ZXh0NyI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAiQHVwc3Rhc2gvY29udGV4dDctbWNwIgogICAgICBdLAogICAgICAiZW52IjogewogICAgICAgICJDT05URVhUN19BUElfS0VZIjogIiIKICAgICAgfQogICAgfSwKICAgICJhZ2VudC1icm93c2VyIjogewogICAgICAiY29tbWFuZCI6ICJucHgiLAogICAgICAiYXJncyI6IFsKICAgICAgICAiLXkiLAogICAgICAgICJAYWdlbnQtaW5mcmEvbWNwLXNlcnZlci1icm93c2VyIgogICAgICBdLAogICAgICAiZW52Ijoge30KICAgIH0sCiAgICAibjhuLXdvcmtmbG93cyI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAibWNwLW44bi1idWlsZGVyIgogICAgICBdLAogICAgICAiZW52IjogewogICAgICAgICJOOE5fSE9TVCI6ICJodHRwczovL244bi5rcnlwdG9zZXJ2cy5jb20vbjhuIiwKICAgICAgICAiTjhOX0FQSV9LRVkiOiAiZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnpkV0lpT2lKbVlURmhNMlptWmkwMU1UQmlMVFF3TnpBdFlUQXpPUzAxTXpZeE1XSXlOV0ZsWVRjaUxDSnBjM01pT2lKdU9HNGlMQ0poZFdRaU9pSndjV0pzYVdNdFlYQnBJaXdpYVdGMElqb3hOelU1TVRBd05qTTVmUS5TdDMtcS1pVzM3dnRULTR4M0M3VnFrWkRrYnh WbURNTVdjMm9qX2JjZllrIiwKICAgICAgICAiT1VUUFVUX1ZFUkJPU0lUWSI6ICJjb25jaXNlIgogICAgICB9CiAgICB9LAogICAgIm44bi1kb2NzIjogewogICAgICAiY29tbWFuZCI6ICJucHgiLAogICAgICAiYXJncyI6IFsKICAgICAgICAiLXkiLAogICAgICAgICJuOG4tbWNwIgogICAgICBdLAogICAgICAiZW52IjogewogICAgICAgICJNQ1BfTU9ERSI6ICJzdGRpbyIsCiAgICAgICAgIkxPR19MRVZFTCI6ICJlcnJvciIsCiAgICAgICAgIkRJU0FCTEVfQ09OU09MRV9PVVRQVVQiOiAidHJ1ZSIsCiAgICAgICAgIk44Tl9NQ1BfVEVMRU1FVFJZX0RJU0FCTEVEIjogInRydWUiLAogICAgICAgICJOOE5fQVBJX1VSTCI6ICJodHRwczovL244bi5rcnlwdG9zZXJ2cy5jb20vbjhuIiwKICAgICAgICAiTjhOX0FQSV9LRVkiOiAiZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnpkV0lpT2lKbVlURmhNMlptWmkwMU1UQmlMVFF3TnpBdFlUQXpPUzAxTXpZeE1XSXlOV0ZsWVRjaUxDSnBjM01pT2lKdU9HNGlMQ0poZFdRaU9pSndjV0pzYVdNdFlYQnBJaXdpYVdGMElqb3hOelU1TVRBd05qTTVmUS5TdDMtcS1pVzM3dnRULTR4M0M3VnFrWkRrYnh WbURNTVdjMm9qX2JjZllrIgogICAgICB9CiAgICB9CiAgfQp9Cg=="
+CLAUDE_CONFIG_B64="ewogICJpbnN0YWxsTWV0aG9kIjogInVua25vd24iLAogICJhdXRvVXBkYXRlcyI6IHRydWUsCiAgIm1jcFNlcnZlcnMiOiB7CiAgICAiZ21haWwiOiB7CiAgICAgICJjb21tYW5kIjogIi9ob21lL3ZqcmFuYS9jdXN0b20tZ21haWwtbWNwL3ZlbnYvYmluL3B5dGhvbiIsCiAgICAgICJhcmdzIjogWwogICAgICAgICIvaG9tZS92anJhbmEvY3VzdG9tLWdtYWlsLW1jcC9lbmhhbmNlZF9zZXJ2ZXIucHkiCiAgICAgIF0KICAgIH0sCiAgICAiemFiYml4IjogewogICAgICAiY29tbWFuZCI6ICIvaG9tZS92anJhbmEvd29yay9tY3Atc2VydmVycy9zZXJ2ZXJzL3phYmJpeC92ZW52L2Jpbi9weXRob24iLAogICAgICAiYXJncyI6IFsKICAgICAgICAiL2hvbWUvdmpyYW5hL3dvcmsvbWNwLXNlcnZlcnMvc2VydmVycy96YWJiaXgvc2NyaXB0cy9zdGFydF9zZXJ2ZXIucHkiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7CiAgICAgICAgIlpBQkJJWF9VUkwiOiAiaHR0cDovL2xvY2FsaG9zdDoxODA4MiIsCiAgICAgICAgIlJFQURfT05MWSI6ICJ0cnVlIgogICAgICB9CiAgICB9LAogICAgImVsayI6IHsKICAgICAgImNvbW1hbmQiOiAiL2hvbWUvdmpyYW5hL21jcC1zZXJ2ZXJzL2Vsay92ZW52L2Jpbi9weXRob24iLAogICAgICAiYXJncyI6IFsKICAgICAgICAiL2hvbWUvdmpyYW5hL21jcC1zZXJ2ZXJzL2Vsay9zZXJ2ZXIucHkiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7fQogICAgfSwKICAgICJmaWxlc3lzdGVtIjogewogICAgICAiY29tbWFuZCI6ICJucHgiLAogICAgICAiYXJncyI6IFsKICAgICAgICAiLXkiLAogICAgICAgICJAbW9kZWxjb250ZXh0cHJvdG9jb2wvc2VydmVyLWZpbGVzeXN0ZW0iLAogICAgICAgICIvaG9tZS92anJhbmEiCiAgICAgIF0KICAgIH0sCiAgICAiZ2l0aHViIjogewogICAgICAiY29tbWFuZCI6ICJucHgiLAogICAgICAiYXJncyI6IFsKICAgICAgICAiLXkiLAogICAgICAgICJAbW9kZWxjb250ZXh0cHJvdG9jb2wvc2VydmVyLWdpdGh1YiIKICAgICAgXSwKICAgICAgImVudiI6IHsKICAgICAgICAiR0lUSFVCX1BFUlNPTkFMX0FDQ0VTU19UT0tFTiI6ICIiCiAgICAgIH0KICAgIH0sCiAgICAicGxheXdyaWdodCI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAiQHBsYXl3cmlnaHQvbWNwQGxhdGVzdCIKICAgICAgXSwKICAgICAgImVudiI6IHt9CiAgICB9LAogICAgImNvbnRleHQ3IjogewogICAgICAiY29tbWFuZCI6ICJucHgiLAogICAgICAiYXJncyI6IFsKICAgICAgICAiLXkiLAogICAgICAgICJAdXBzdGFzaC9jb250ZXh0Ny1tY3AiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7CiAgICAgICAgIkNPTlRFWFQ3X0FQSV9LRVkiOiAiIgogICAgICB9CiAgICB9LAogICAgImFnZW50LWJyb3dzZXIiOiB7CiAgICAgICJjb21tYW5kIjogIm5weCIsCiAgICAgICJhcmdzIjogWwogICAgICAgICIteSIsCiAgICAgICAgIkBhZ2VudC1pbmZyYS9tY3Atc2VydmVyLWJyb3dzZXIiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7fQogICAgfSwKICAgICJuOG4td29ya2Zsb3dzIjogewogICAgICAiY29tbWFuZCI6ICJucHgiLAogICAgICAiYXJncyI6IFsKICAgICAgICAiLXkiLAogICAgICAgICJtY3AtbjhuLWJ1aWxkZXIiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7CiAgICAgICAgIk44Tl9IT1NUIjogImh0dHBzOi8vbjhuLmtyeXB0b3NlcnZzLmNvbS9uOG4iLAogICAgICAgICJOOE5fQVBJX0tFWSI6ICJleUpoYkdjaU9pSklVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKemRXSWlPaUptWVRGaE0yWm1aaTAxTVRCaUxUUXdOekF0WVRBek9TMDFNell4TVdJeU5XRmxZVGNpTENKcGMzTWlPaUp1T0c0aUxDSmhkV1FpT2lKd2RXSnNhV010WVhCcElpd2lhV0YwSWpveE56VTVNVEF3TmpNNWZRLlN0My1xLWlXMzd2dFQtNHgzQzdWcWtaRGtieFZtRE1NV2Myb2pfYmNmWWsiLAogICAgICAgICJPVVRQVVRfVkVSQk9TSVRZIjogImNvbmNpc2UiCiAgICAgIH0KICAgIH0sCiAgICAibjhuLWRvY3MiOiB7CiAgICAgICJjb21tYW5kIjogIm5weCIsCiAgICAgICJhcmdzIjogWwogICAgICAgICIteSIsCiAgICAgICAgIm44bi1tY3AiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7CiAgICAgICAgIk1DUF9NT0RFIjogInN0ZGlvIiwKICAgICAgICAiTE9HX0xFVkVMIjogImVycm9yIiwKICAgICAgICAiRElTQUJMRV9DT05TT0xFX09VVFBVVCI6ICJ0cnVlIiwKICAgICAgICAiTjhOX01DUF9URUxFTUVUUllfRElTQUJMRUQiOiAidHJ1ZSIsCiAgICAgICAgIk44Tl9BUElfVVJMIjogImh0dHBzOi8vbjhuLmtyeXB0b3NlcnZzLmNvbS9uOG4iLAogICAgICAgICJOOE5fQVBJX0tFWSI6ICJleUpoYkdjaU9pSklVekkxTmlJc0luUjVjQ0k2SWtwWFZDSjkuZXlKemRXSWlPaUptWVRGaE0yWm1aaTAxTVRCaUxUUXdOekF0WVRBek9TMDFNell4TVdJeU5XRmxZVGNpTENKcGMzTWlPaUp1T0c0aUxDSmhkV1FpT2lKd2RXSnNhV010WVhCcElpd2lhV0YwSWpveE56VTVNVEF3TmpNNWZRLlN0My1xLWlXMzd2dFQtNHgzQzdWcWtaRGtieFZtRE1NV2Myb2pfYmNmWWsiCiAgICAgIH0KICAgIH0sCiAgICAiZmlyZWZseS1paWkiOiB7CiAgICAgICJjb21tYW5kIjogIi9ob21lL3ZqcmFuYS8uZmlyZWZseS1tY3AvZmlyZWZseS1tY3Atd3JhcHBlci5zaCIsCiAgICAgICJhcmdzIjogW10KICAgIH0KICB9Cn0K"
 
 # Environment variables (add your secrets here)
 declare -A ENV_VARS=(
     ["ZABBIX_URL"]="http://localhost:18082"
     ["ZABBIX_READ_ONLY"]="true"
     ["N8N_HOST"]="https://n8n.kryptoservs.com/n8n"
-    ["N8N_API_KEY"]="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTAwNjM5fQ.St3-q-iW37vTt-4x3C7VqkZDkbxVmDMMWC2oj_bcfYk"
+    ["N8N_API_KEY"]="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTAwNjM5fQ.St3-q-iW37vtT-4x3C7VqkZDkbxVmDMMWc2oj_bcfYk"
     ["GITHUB_PERSONAL_ACCESS_TOKEN"]="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"
     # Add more environment variables as needed
 )
@@ -180,31 +201,45 @@ setup_python_servers() {
         log_info "Setting up $server in $server_dir"
 
         # Create directory
-        mkdir -p "$server_dir"
+        mkdir -p "$server_dir" || { log_error "Failed to create directory $server_dir"; continue; }
 
         # Create virtual environment
         if [ ! -d "${server_dir}/venv" ]; then
-            python3 -m venv "${server_dir}/venv"
+            if ! python3 -m venv "${server_dir}/venv"; then
+                log_error "Failed to create virtual environment for $server"
+                continue
+            fi
             log_info "Created virtual environment for $server"
+        else
+            log_info "Virtual environment already exists for $server"
         fi
 
         # Activate and install dependencies
-        source "${server_dir}/venv/bin/activate"
+        if ! source "${server_dir}/venv/bin/activate"; then
+            log_error "Failed to activate virtual environment for $server"
+            continue
+        fi
 
-        # Install common MCP dependencies
-        pip install --upgrade pip
-        pip install mcp anthropic-mcp pydantic
+        # Install common MCP dependencies with error handling
+        log_info "Installing dependencies for $server..."
+        if ! pip install --upgrade pip -q; then
+            log_warning "Failed to upgrade pip for $server"
+        fi
+
+        if ! pip install mcp pydantic -q 2>/dev/null; then
+            log_warning "Failed to install MCP packages for $server (may already be installed)"
+        fi
 
         # Server-specific installations
         case $server in
             gmail)
-                pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client
+                pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client -q || log_warning "Failed to install Gmail dependencies"
                 ;;
             zabbix)
-                pip install pyzabbix requests
+                pip install pyzabbix requests -q || log_warning "Failed to install Zabbix dependencies"
                 ;;
             elk)
-                pip install elasticsearch
+                pip install elasticsearch -q || log_warning "Failed to install Elasticsearch dependencies"
                 ;;
         esac
 
@@ -217,12 +252,19 @@ setup_python_servers() {
 install_npm_packages() {
     log "Installing NPM MCP packages..."
 
+    # Check if npm is available
+    if ! command_exists npm; then
+        log_error "NPM not found. Cannot install packages."
+        return 1
+    fi
+
     for package in "${NPM_PACKAGES[@]}"; do
-        log_info "Installing $package"
-        npm install -g "$package" || log_warning "Failed to install $package globally, will use npx"
+        log_info "Checking $package"
+        # Don't need to install globally since we use npx
+        log_info "✓ $package will be used via npx"
     done
 
-    log "NPM packages installed"
+    log "NPM package configuration complete (using npx on-demand)"
 }
 
 # Restore Claude configuration
@@ -370,18 +412,33 @@ main() {
     fi
 
     create_backup
-    install_dependencies
+
+    if ! install_dependencies; then
+        log_error "Dependency installation had errors. Continuing anyway..."
+    fi
+
     clone_mcp_repos
     setup_python_servers
-    install_npm_packages
+
+    if ! install_npm_packages; then
+        log_warning "NPM package setup had issues. MCP servers using npx should still work."
+    fi
+
     restore_claude_config
     setup_environment
-    verify_installation
 
-    log ""
-    log "${GREEN}========================================${NC}"
-    log "${GREEN}  MCP Restoration Complete!${NC}"
-    log "${GREEN}========================================${NC}"
+    if verify_installation; then
+        log ""
+        log "${GREEN}========================================${NC}"
+        log "${GREEN}  MCP Restoration Complete!${NC}"
+        log "${GREEN}========================================${NC}"
+    else
+        log ""
+        log "${YELLOW}========================================${NC}"
+        log "${YELLOW}  MCP Restoration Finished with Warnings${NC}"
+        log "${YELLOW}========================================${NC}"
+        log_warning "Some components may not be fully configured. Check the log above."
+    fi
     log ""
     log "Next steps:"
     log "  1. Run: source ~/.bashrc"

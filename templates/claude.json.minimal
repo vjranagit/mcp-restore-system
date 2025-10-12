@@ -1,0 +1,104 @@
+{
+  "installMethod": "unknown",
+  "autoUpdates": true,
+  "mcpServers": {
+    "gmail": {
+      "command": "/home/vjrana/custom-gmail-mcp/venv/bin/python",
+      "args": [
+        "/home/vjrana/custom-gmail-mcp/enhanced_server.py"
+      ]
+    },
+    "zabbix": {
+      "command": "/home/vjrana/work/mcp-servers/servers/zabbix/venv/bin/python",
+      "args": [
+        "/home/vjrana/work/mcp-servers/servers/zabbix/scripts/start_server.py"
+      ],
+      "env": {
+        "ZABBIX_URL": "http://localhost:18082",
+        "READ_ONLY": "true"
+      }
+    },
+    "elk": {
+      "command": "/home/vjrana/mcp-servers/elk/venv/bin/python",
+      "args": [
+        "/home/vjrana/mcp-servers/elk/server.py"
+      ],
+      "env": {}
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/vjrana"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": ""
+      }
+    },
+    "agent-browser": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@agent-infra/mcp-server-browser"
+      ],
+      "env": {}
+    },
+    "n8n-workflows": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-n8n-builder"
+      ],
+      "env": {
+        "N8N_HOST": "https://n8n.kryptoservs.com/n8n",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTAwNjM5fQ.St3-q-iW37vtT-4x3C7VqkZDkbxVmDMMWc2oj_bcfYk",
+        "OUTPUT_VERBOSITY": "concise"
+      }
+    },
+    "n8n-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "n8n-mcp"
+      ],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_MCP_TELEMETRY_DISABLED": "true",
+        "N8N_API_URL": "https://n8n.kryptoservs.com/n8n",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTAwNjM5fQ.St3-q-iW37vtT-4x3C7VqkZDkbxVmDMMWc2oj_bcfYk"
+      }
+    },
+    "firefly-iii": {
+      "command": "/home/vjrana/.firefly-mcp/firefly-mcp-wrapper.sh",
+      "args": []
+    }
+  }
+}
