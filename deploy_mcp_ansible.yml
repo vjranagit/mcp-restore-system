@@ -1,0 +1,251 @@
+---
+################################################################################
+# Ansible Playbook: Deploy Claude MCP Servers
+#
+# This playbook deploys all MCP servers to remote machines via Ansible
+#
+# Usage:
+#   ansible-playbook -i inventory deploy_mcp_ansible.yml
+#   ansible-playbook -i inventory deploy_mcp_ansible.yml --limit production
+#   ansible-playbook -i inventory deploy_mcp_ansible.yml --tags python-servers
+################################################################################
+
+- name: Deploy Claude MCP Servers to Remote Hosts
+  hosts: all
+  become: no
+  gather_facts: yes
+
+  vars:
+    # Base configuration
+    mcp_user: "{{ ansible_user }}"
+    mcp_home: "/home/{{ mcp_user }}"
+    mcp_base_dir: "{{ mcp_home }}/mcp-servers"
+
+    # Python MCP servers
+    python_servers:
+      - name: gmail
+        dir: "{{ mcp_home }}/custom-gmail-mcp"
+        packages:
+          - google-auth
+          - google-auth-oauthlib
+          - google-auth-httplib2
+          - google-api-python-client
+          - mcp
+          - anthropic-mcp
+
+      - name: zabbix
+        dir: "{{ mcp_home }}/work/mcp-servers/servers/zabbix"
+        packages:
+          - pyzabbix
+          - requests
+          - mcp
+          - anthropic-mcp
+
+      - name: elk
+        dir: "{{ mcp_home }}/mcp-servers/elk"
+        packages:
+          - elasticsearch
+          - mcp
+          - anthropic-mcp
+
+    # NPM packages
+    npm_packages:
+      - "@modelcontextprotocol/server-filesystem"
+      - "@modelcontextprotocol/server-github"
+      - "@playwright/mcp@latest"
+      - "@upstash/context7-mcp"
+      - "@agent-infra/mcp-server-browser"
+      - "mcp-n8n-builder"
+      - "n8n-mcp"
+
+    # Environment variables
+    env_vars:
+      ZABBIX_URL: "http://localhost:18082"
+      ZABBIX_READ_ONLY: "true"
+      N8N_HOST: "https://n8n.kryptoservs.com/n8n"
+      N8N_API_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYTFhM2ZmZi01MTBiLTQwNzAtYTAzOS01MzYxMWIyNWFlYTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU5MTAwNjM5fQ.St3-q-iW37vTt-4x3C7VqkZDkbxVmDMMWC2oj_bcfYk"
+
+    # Claude configuration (base64 encoded)
+    claude_config_b64: "ewogICJtY3BTZXJ2ZXJzIjogewogICAgImdtYWlsIjogewogICAgICAiY29tbWFuZCI6ICIvaG9tZS92anJhbmEvY3VzdG9tLWdtYWlsLW1jcC92ZW52L2Jpbi9weXRob24iLAogICAgICAiYXJncyI6IFsKICAgICAgICAiL2hvbWUvdmpyYW5hL2N1c3RvbS1nbWFpbC1tY3AvZW5oYW5jZWRfc2VydmVyLnB5IgogICAgICBdCiAgICB9LAogICAgInphYmJpeCI6IHsKICAgICAgImNvbW1hbmQiOiAiL2hvbWUvdmpyYW5hL3dvcmsvbWNwLXNlcnZlcnMvc2VydmVycy96YWJiaXgvdmVudi9iaW4vcHl0aG9uIiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi9ob21lL3ZqcmFuYS93b3JrL21jcC1zZXJ2ZXJzL3NlcnZlcnMvemFiYml4L3NjcmlwdHMvc3RhcnRfc2VydmVyLnB5IgogICAgICBdLAogICAgICAiZW52IjogewogICAgICAgICJaQUJCSVhfVVJMIjogImh0dHA6Ly9sb2NhbGhvc3Q6MTgwODIiLAogICAgICAgICJSRUFEX09OTFkiOiAidHJ1ZSIKICAgICAgfQogICAgfSwKICAgICJlbGsiOiB7CiAgICAgICJjb21tYW5kIjogIi9ob21lL3ZqcmFuYS9tY3Atc2VydmVycy9lbGsvdmVudi9iaW4vcHl0aG9uIiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi9ob21lL3ZqcmFuYS9tY3Atc2VydmVycy9lbGsvc2VydmVyLnB5IgogICAgICBdLAogICAgICAiZW52Ijoge30KICAgIH0sCiAgICAiZmlsZXN5c3RlbSI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAiQG1vZGVsY29udGV4dHByb3RvY29sL3NlcnZlci1maWxlc3lzdGVtIiwKICAgICAgICAiL2hvbWUvdmpyYW5hIgogICAgICBdCiAgICB9LAogICAgImdpdGh1YiI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAiQG1vZGVsY29udGV4dHByb3RvY29sL3NlcnZlci1naXRodWIiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7CiAgICAgICAgIkdJVEhVQl9QRVJTT05BTF9BQ0NFU1NfVE9LRU4iOiAiIgogICAgICB9CiAgICB9LAogICAgInBsYXl3cmlnaHQiOiB7CiAgICAgICJjb21tYW5kIjogIm5weCIsCiAgICAgICJhcmdzIjogWwogICAgICAgICIteSIsCiAgICAgICAgIkBwbGF5d3JpZ2h0L21jcEBsYXRlc3QiCiAgICAgIF0sCiAgICAgICJlbnYiOiB7fQogICAgfSwKICAgICJjb250ZXh0NyI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAiQHVwc3Rhc2gvY29udGV4dDctbWNwIgogICAgICBdLAogICAgICAiZW52IjogewogICAgICAgICJDT05URVhUN19BUElfS0VZIjogIiIKICAgICAgfQogICAgfSwKICAgICJhZ2VudC1icm93c2VyIjogewogICAgICAiY29tbWFuZCI6ICJucHgiLAogICAgICAiYXJncyI6IFsKICAgICAgICAiLXkiLAogICAgICAgICJAYWdlbnQtaW5mcmEvbWNwLXNlcnZlci1icm93c2VyIgogICAgICBdLAogICAgICAiZW52Ijoge30KICAgIH0sCiAgICAibjhuLXdvcmtmbG93cyI6IHsKICAgICAgImNvbW1hbmQiOiAibnB4IiwKICAgICAgImFyZ3MiOiBbCiAgICAgICAgIi15IiwKICAgICAgICAibWNwLW44bi1idWlsZGVyIgogICAgICBdLAogICAgICAiZW52IjogewogICAgICAgICJOOE5fSE9TVCI6ICJodHRwczovL244bi5rcnlwdG9zZXJ2cy5jb20vbjhuIiwKICAgICAgICAiTjhOX0FQSV9LRVkiOiAiZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnpkV0lpT2lKbVlURmhNMlptWmkwMU1UQmlMVFF3TnpBdFlUQXpPUzAxTXpZeE1XSXlOV0ZsWVRjaUxDSnBjM01pT2lKdU9HNGlMQ0poZFdRaU9pSndjV0pzYVdNdFlYQnBJaXdpYVdGMElqb3hOelU1TVRBd05qTTVmUS5TdDMtcS1pVzM3dnRULTR4M0M3VnFrWkRrYnh WbURNTVdjMm9qX2JjZllrIiwKICAgICAgICAiT1VUUFVUX1ZFUkJPU0lUWSI6ICJjb25jaXNlIgogICAgICB9CiAgICB9LAogICAgIm44bi1kb2NzIjogewogICAgICAiY29tbWFuZCI6ICJucHgiLAogICAgICAiYXJncyI6IFsKICAgICAgICAiLXkiLAogICAgICAgICJuOG4tbWNwIgogICAgICBdLAogICAgICAiZW52IjogewogICAgICAgICJNQ1BfTU9ERSI6ICJzdGRpbyIsCiAgICAgICAgIkxPR19MRVZFTCI6ICJlcnJvciIsCiAgICAgICAgIkRJU0FCTEVfQ09OU09MRV9PVVRQVVQiOiAidHJ1ZSIsCiAgICAgICAgIk44Tl9NQ1BfVEVMRU1FVFJZX0RJU0FCTEVEIjogInRydWUiLAogICAgICAgICJOOE5fQVBJX1VSTCI6ICJodHRwczovL244bi5rcnlwdG9zZXJ2cy5jb20vbjhuIiwKICAgICAgICAiTjhOX0FQSV9LRVkiOiAiZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnpkV0lpT2lKbVlURmhNMlptWmkwMU1UQmlMVFF3TnpBdFlUQXpPUzAxTXpZeE1XSXlOV0ZsWVRjaUxDSnBjM01pT2lKdU9HNGlMQ0poZFdRaU9pSndjV0pzYVdNdFlYQnBJaXdpYVdGMElqb3hOelU1TVRBd05qTTVmUS5TdDMtcS1pVzM3dnRULTR4M0M3VnFrWkRrYnh WbURNTVdjMm9qX2JjZllrIgogICAgICB9CiAgICB9CiAgfQp9Cg=="
+
+  tasks:
+    # =========================================================================
+    # SYSTEM PREPARATION
+    # =========================================================================
+    - name: Gather system information
+      debug:
+        msg: "Deploying to {{ ansible_hostname }} ({{ ansible_distribution }} {{ ansible_distribution_version }})"
+      tags: always
+
+    - name: Create backup directory
+      file:
+        path: "{{ mcp_home }}/.mcp-backups"
+        state: directory
+        mode: '0755'
+      tags: always
+
+    - name: Backup existing .claude.json
+      copy:
+        src: "{{ mcp_home }}/.claude.json"
+        dest: "{{ mcp_home }}/.mcp-backups/claude.json.{{ ansible_date_time.iso8601_basic_short }}"
+        remote_src: yes
+      ignore_errors: yes
+      tags: always
+
+    # =========================================================================
+    # INSTALL DEPENDENCIES
+    # =========================================================================
+    - name: Install system packages (Debian/Ubuntu)
+      become: yes
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - nodejs
+          - npm
+          - git
+          - curl
+          - wget
+          - jq
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+      tags: dependencies
+
+    - name: Install system packages (RedHat/CentOS/Fedora)
+      become: yes
+      dnf:
+        name:
+          - python3
+          - python3-pip
+          - nodejs
+          - npm
+          - git
+          - curl
+          - wget
+          - jq
+        state: present
+      when: ansible_os_family == "RedHat"
+      tags: dependencies
+
+    # =========================================================================
+    # PYTHON MCP SERVERS
+    # =========================================================================
+    - name: Create Python MCP server directories
+      file:
+        path: "{{ item.dir }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ python_servers }}"
+      tags: python-servers
+
+    - name: Create Python virtual environments
+      command: "python3 -m venv {{ item.dir }}/venv"
+      args:
+        creates: "{{ item.dir }}/venv/bin/python"
+      loop: "{{ python_servers }}"
+      tags: python-servers
+
+    - name: Upgrade pip in virtual environments
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ item.dir }}/venv"
+      loop: "{{ python_servers }}"
+      tags: python-servers
+
+    - name: Install Python packages for MCP servers
+      pip:
+        name: "{{ item.1 }}"
+        virtualenv: "{{ item.0.dir }}/venv"
+      loop: "{{ python_servers | subelements('packages') }}"
+      tags: python-servers
+
+    # =========================================================================
+    # NPM MCP PACKAGES
+    # =========================================================================
+    - name: Install NPM MCP packages globally
+      npm:
+        name: "{{ item }}"
+        global: yes
+        state: present
+      loop: "{{ npm_packages }}"
+      become: yes
+      ignore_errors: yes
+      tags: npm-packages
+
+    # =========================================================================
+    # CLAUDE CONFIGURATION
+    # =========================================================================
+    - name: Decode Claude configuration
+      set_fact:
+        claude_config_json: "{{ claude_config_b64 | b64decode }}"
+      tags: config
+
+    - name: Update paths in Claude config for current user
+      set_fact:
+        claude_config_updated: "{{ claude_config_json | regex_replace('/home/vjrana', mcp_home) }}"
+      tags: config
+
+    - name: Write Claude configuration
+      copy:
+        content: "{{ claude_config_updated }}"
+        dest: "{{ mcp_home }}/.claude.json"
+        mode: '0600'
+      tags: config
+
+    # =========================================================================
+    # ENVIRONMENT VARIABLES
+    # =========================================================================
+    - name: Add environment variables to .bashrc
+      lineinfile:
+        path: "{{ mcp_home }}/.bashrc"
+        line: "export {{ item.key }}=\"{{ item.value }}\""
+        regexp: "^export {{ item.key }}="
+        create: yes
+      loop: "{{ env_vars | dict2items }}"
+      tags: environment
+
+    # =========================================================================
+    # VERIFICATION
+    # =========================================================================
+    - name: Verify .claude.json is valid JSON
+      command: "jq empty {{ mcp_home }}/.claude.json"
+      changed_when: false
+      tags: verify
+
+    - name: Check Python virtual environments
+      stat:
+        path: "{{ item.dir }}/venv/bin/python"
+      loop: "{{ python_servers }}"
+      register: venv_check
+      tags: verify
+
+    - name: Display verification results
+      debug:
+        msg: "Virtual environment {{ item.item.name }}: {{ 'OK' if item.stat.exists else 'MISSING' }}"
+      loop: "{{ venv_check.results }}"
+      tags: verify
+
+    # =========================================================================
+    # POST-DEPLOYMENT
+    # =========================================================================
+    - name: Display completion message
+      debug:
+        msg: |
+          ========================================
+          MCP Deployment Complete!
+          ========================================
+          Host: {{ ansible_hostname }}
+          User: {{ mcp_user }}
+
+          Configuration: {{ mcp_home }}/.claude.json
+          Backups: {{ mcp_home }}/.mcp-backups/
+
+          Next steps:
+          1. SSH to {{ ansible_hostname }}
+          2. Run: source ~/.bashrc
+          3. Test: claude
+          4. Verify: claude mcp list
+      tags: always

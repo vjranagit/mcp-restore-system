@@ -1,0 +1,37 @@
+# Ignore actual inventory file (contains sensitive host info)
+inventory
+
+# Ignore backups directory
+backups/
+
+# Ignore logs
+*.log
+restore_*.log
+ansible.log
+
+# Ignore temporary files
+*.tmp
+*.swp
+*~
+
+# Ignore secrets and API keys
+.env
+*.key
+*.pem
+secrets/
+
+# Ignore Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
+
+# Ignore npm
+node_modules/
+package-lock.json
+
+# Ignore OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,29 @@
+# Ansible Inventory for MCP Deployment
+# Copy this file to 'inventory' and update with your hosts
+
+[all:vars]
+ansible_user=youruser
+ansible_ssh_pass=yourpassword
+# Or use SSH key:
+# ansible_ssh_private_key_file=~/.ssh/id_rsa
+
+[development]
+dev-server-1 ansible_host=192.168.1.100
+dev-server-2 ansible_host=192.168.1.101
+
+[production]
+prod-server-1 ansible_host=192.168.1.200
+prod-server-2 ansible_host=192.168.1.201
+
+[local]
+localhost ansible_connection=local
+
+# Example groups
+[cockpit]
+192.168.1.222 ansible_user=root
+
+[cctv]
+192.168.1.228 ansible_user=root
+
+[lxdcctv]
+10.121.193.11 ansible_user=root
